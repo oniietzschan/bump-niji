@@ -306,7 +306,7 @@ end
 -- Responses
 ------------------------------------------
 
-local touch = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
+local touch = function(_, col)
   return col.touchX, col.touchY, {}, 0
 end
 

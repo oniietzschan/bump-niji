@@ -1,6 +1,6 @@
 local bump = require 'bump-niji'
 
-local bump_debug = {}
+local bumpDebug
 do
   local function getCellRect(world, cx,cy)
     local cellSize = world.cellSize
@@ -8,7 +8,7 @@ do
     return l,t,cellSize,cellSize
   end
 
-  function bump_debug.draw(world)
+  bumpDebug = function(world)
     local cellSize = world.cellSize
     local font = love.graphics.getFont()
     local fontHeight = font:getHeight()
@@ -36,21 +36,19 @@ local instructions = [[
     delete: run garbage collector
 ]]
 
-local cols_len = 0 -- how many collisions are happening
+local function drawMessage()
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.print(instructions, 550, 10)
+end
+
 
 -- World creation
 local world = bump.newWorld()
 
-
--- Message/debug functions
-local function drawMessage()
-  local msg = instructions:format(tostring(shouldDrawDebug))
-  love.graphics.setColor(1, 1, 1)
-  love.graphics.print(msg, 550, 10)
-end
+local cols_len = 0 -- how many collisions are happening
 
 local function drawDebug()
-  bump_debug.draw(world)
+  bumpDebug(world)
 
   local statistics = ("fps: %d, mem: %dKB, collisions: %d, items: %d"):format(love.timer.getFPS(), collectgarbage("count"), cols_len, world:countItems())
   love.graphics.setColor(1, 1, 1)
@@ -66,9 +64,7 @@ local function consolePrint(msg)
 end
 
 local function drawConsole()
-  local str = table.concat(consoleBuffer, "\n")
   for i, line in ipairs(consoleBuffer) do
-  -- for i=1,consoleBufferSize do
     love.graphics.setColor(1,1,1, i / consoleBufferSize)
     love.graphics.printf(line, 10, 580-(consoleBufferSize - i)*12, 790, "left")
   end
@@ -150,11 +146,12 @@ function love.load()
   addBlock(0,        0,      32, 600 - 32)
   addBlock(800 - 32, 32,      32, 600 - 32)
 
-  for i=1,30 do
-    addBlock( math.random(100, 600),
-              math.random(100, 400),
-              math.random(10, 100),
-              math.random(10, 100)
+  for _ = 1, 30 do
+    addBlock(
+      math.random(100, 600),
+      math.random(100, 400),
+      math.random(10, 100),
+      math.random(10, 100)
     )
   end
 end
@@ -162,6 +159,8 @@ end
 function love.update(dt)
   player:update(dt)
 end
+
+local shouldDrawDebug = false
 
 function love.draw()
   drawBlocks()

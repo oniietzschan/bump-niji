@@ -143,7 +143,7 @@ describe('World', function()
           world:add({'c'}, 50,0, 10,10)
           local d = world:add({'d'}, 90,0, 10,10)
 
-          local cols = world:project({}, 110,0, 10,10, 10, 0, function(item, obj)
+          local cols = world:project({}, 110,0, 10,10, 10, 0, function(_, obj)
             return obj ~= d and "touch"
           end)
 
@@ -422,7 +422,7 @@ describe('World', function()
         world:add(ghostA, 2 * TILE,          0, TILE, TILE)
         world:add(ghostB, 4 * TILE,          0, TILE, TILE)
         world:add(wall,   6 * TILE, -1 * TILE , TILE, 3 * TILE)
-        local filter = function(this, other)
+        local filter = function(_, other)
           return other.solid and 'slide' or 'cross'
         end
         local x, y, cols, len = world:move(player, 10 * TILE, 0, filter)
