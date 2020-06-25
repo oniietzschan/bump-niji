@@ -114,6 +114,7 @@ function player:update(dt)
   for _, col in ipairs(cols) do
     consolePrint(("col.other = %s, col.type = %s, col.normal = %d,%d"):format(col.other, col.type, col.normalX, col.normalY))
   end
+  world.freeTable(cols)
 end
 
 function player:draw()

@@ -550,14 +550,12 @@ local bump = require 'bump-niji'
 If you copied bump.lua to a file not accesible from the root folder (for example a lib folder), change the code accordingly:
 
 ``` lua
-local bump = require 'lib.bump'
+local bump = require 'lib.bump-niji'
 ```
-
-Please make sure that you read the license, too (for your convenience it's now included at the beginning of the bump.lua file.
 
 ## License
 
-bump.lua is licensed under the MIT license.
+bump-niji is licensed under the MIT license.
 
 ## Specs
 

@@ -36,7 +36,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------
 -- Table Pool
 ------------------------------------------
-local Pool = {}
+local Pool = {
+  -- loaned = 0,
+}
 do
   local ok, tabelClear = pcall(require, 'table.clear')
   if not ok then
@@ -52,10 +54,12 @@ do
 
   function Pool.fetch()
     if len == 0 then
+      -- Pool.loaned = Pool.loaned + 1
       Pool.free({})
     end
     local t = table.remove(pool, len)
     len = len - 1
+    -- Pool.loaned = Pool.loaned + 1
     return t
   end
 
@@ -63,6 +67,7 @@ do
     tabelClear(t)
     len = len + 1
     pool[len] = t
+    -- Pool.loaned = Pool.loaned - 1
   end
 end
 
@@ -226,17 +231,17 @@ local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
     tx, ty = x1 + dx * ti, y1 + dy * ti
   end
 
-  return {
-    overlaps = overlaps,
-    ti = ti,
-    distance = rect_getSquareDistance(x1,y1,w1,h1, x2,y2,w2,h2),
-    moveX = dx,
-    moveY = dy,
-    normalX = nx,
-    normalY = ny,
-    touchX = tx,
-    touchY = ty,
-  }
+  local col = Pool.fetch()
+  col.overlaps = overlaps
+  col.ti = ti
+  col.distance = rect_getSquareDistance(x1,y1,w1,h1, x2,y2,w2,h2)
+  col.moveX = dx
+  col.moveY = dy
+  col.normalX = nx
+  col.normalY = ny
+  col.touchX = tx
+  col.touchY = ty
+  return col
 end
 
 ------------------------------------------
@@ -307,7 +312,7 @@ end
 ------------------------------------------
 
 local touch = function(_, col)
-  return col.touchX, col.touchY, {}, 0
+  return col.touchX, col.touchY, Pool.fetch(), 0
 end
 
 local cross = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
@@ -423,12 +428,13 @@ local function getDictItemsInCellRect(self, cl,ct,cw,ch)
   return items_dict
 end
 
-local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
+local getCellsTouchedBySegment
+do
+  local isBusy = false
+  local this, cells, cellsLen, visited
 
-  local cells, cellsLen, visited = {}, 0, {}
-
-  grid_traverse(self.cellSize, x1,y1,x2,y2, function(cx, cy)
-    local row  = self.rows[cy]
+  local function tryGetCell(cx, cy)
+    local row  = this.rows[cy]
     if not row then return end
     local cell = row[cx]
     if not cell or visited[cell] then return end
@@ -436,9 +442,16 @@ local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
     visited[cell] = true
     cellsLen = cellsLen + 1
     cells[cellsLen] = cell
-  end)
+  end
 
-  return cells, cellsLen
+  getCellsTouchedBySegment = function(self, x1,y1,x2,y2)
+    assert(isBusy == false, 'getCellsTouchedBySegment called again before it finished')
+    this, cells, cellsLen, visited, isBusy = self, {}, 0, {}, true
+    grid_traverse(self.cellSize, x1,y1,x2,y2, tryGetCell)
+    isBusy = false
+
+    return cells, cellsLen
+  end
 end
 
 local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
@@ -469,22 +482,12 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   return itemInfo, itemInfoLen
 end
 
-local function getResponseByName(self, name)
-  local response = self.responses[name]
-  if not response then
-    error(('Unknown collision type: %s (%s)'):format(name, type(name)))
-  end
-  return response
-end
-
 
 -- Misc Public Methods
 
 function World:addResponse(name, response)
   self.responses[name] = response
 end
-
-local EMPTY_TABLE = {}
 
 function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   assertIsRect(x,y,w,h)
@@ -493,12 +496,10 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   goalY = goalY or y
   filter = filter or defaultFilter
 
-  local collisions, len = nil, 0
+  local collisions, len = Pool.fetch(), 0
 
   local visited = Pool.fetch()
-  if item ~= nil then
-    visited[item] = true
-  end
+  visited[item] = true
 
   -- This could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding rect of the whole movement. Conditional to building a queryPolygon method
@@ -525,23 +526,18 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
           col.type     = responseName
 
           len = len + 1
-          if collisions == nil then
-            collisions = {}
-          end
           collisions[len] = col
         end
       end
     end
   end
 
-  Pool.free(visited)
   Pool.free(dictItemsInCellRect)
+  Pool.free(visited)
 
-  if collisions ~= nil then
-    table.sort(collisions, sortByTiAndDistance)
-  end
+  table.sort(collisions, sortByTiAndDistance)
 
-  return collisions or EMPTY_TABLE, len
+  return collisions, len
 end
 
 function World:countCells()
@@ -599,7 +595,7 @@ function World:queryRect(x,y,w,h, filter)
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
 
-  local items, len = {}, 0
+  local items, len = Pool.fetch(), 0
 
   local rect
   for item,_ in pairs(dictItemsInCellRect) do
@@ -621,7 +617,7 @@ function World:queryPoint(x,y, filter)
   local cx,cy = self:toCell(x,y)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cx,cy,1,1)
 
-  local items, len = {}, 0
+  local items, len = Pool.fetch(), 0
 
   local rect
   for item,_ in pairs(dictItemsInCellRect) do
@@ -641,7 +637,7 @@ end
 
 function World:querySegment(x1, y1, x2, y2, filter)
   local itemInfo, len = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2, filter)
-  local items = {}
+  local items = Pool.fetch()
   for i=1, len do
     items[i] = itemInfo[i].item
   end
@@ -761,11 +757,7 @@ function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
 
   local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, filter)
 
-  if projected_len == 0 then
-    return goalX, goalY, EMPTY_TABLE, 0
-  end
-
-  local cols, len = {}, 0
+  local cols, len = Pool.fetch(), 0
 
   local visited = Pool.fetch()
   visited[item] = true
@@ -775,10 +767,15 @@ function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
     len       = len + 1
     cols[len] = col
 
+    -- Clear projected_cols and all child tables, except index 1.
+    for i = 2, projected_len do
+      Pool.free(projected_cols[i])
+    end
+    Pool.free(projected_cols)
+
     visited[col.other] = true
 
-    local response = getResponseByName(self, col.type)
-
+    local response = self.responses[col.type]
     goalX, goalY, projected_cols, projected_len = response(
       self,
       col,
@@ -790,9 +787,22 @@ function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
   end
 
   Pool.free(visited)
+  Pool.free(projected_cols)
 
   return goalX, goalY, cols, len
 end
+
+function World.freeTable(cols)
+  for i = #cols, 1, -1 do
+    Pool.free(cols[i])
+    cols[i] = nil
+  end
+  Pool.free(cols)
+end
+
+-- function World.debug()
+--   print(Pool.loaned)
+-- end
 
 -- Public library functions
 

@@ -10,7 +10,7 @@ local function clamp(lower, val, upper)
   return math.max(lower, math.min(upper, val))
 end
 
-local function doTest(world)
+local function doTest(world, moveFn)
   -- seed RNG
   math.randomseed(RNG_SEED)
 
@@ -37,8 +37,11 @@ local function doTest(world)
       local x, y = world:getRect(entity)
       local goalX = clamp(0, x - MOVE_RANGE + (math.random() * MOVE_RANGE * 2), WORLD_SIZE)
       local goalY = clamp(0, y - MOVE_RANGE + (math.random() * MOVE_RANGE * 2), WORLD_SIZE)
-      local _, _, _, len = world:move(entity, goalX, goalY)
+      local len = moveFn(world, entity, goalX, goalY)
       collisions = collisions + len
+    end
+    if world.debug then
+      world.debug()
     end
   end
 
@@ -56,19 +59,27 @@ local function doTest(world)
   return kbGarbage
 end
 
-local function doTests(label, bump)
+local function doTests(label, bump, moveFn)
   print(("============= %s ============="):format(label))
   local totalGarbage = 0
   for _ = 1, TEST_COUNT do
     local world = bump.newWorld(1)
-    local garbage = doTest(world)
+    local garbage = doTest(world, moveFn)
     totalGarbage = totalGarbage + garbage
   end
   local averageGarbage = totalGarbage / TEST_COUNT
   print(("Garbage: %.2f kB"):format(averageGarbage))
-  print(("(Average after %d tests.)"):format(TEST_COUNT))
+  print(("(Average after %d tests.)\n"):format(TEST_COUNT))
 end
 
-doTests('Original', require 'bump-original')
-print('')
-doTests('Modded', require 'bump-niji')
+local function moveOriginalFn(world, entity, goalX, goalY, goalZ)
+  return select(4, world:move(entity, goalX, goalY, goalZ))
+end
+doTests('Original', require 'bump-original', moveOriginalFn)
+
+local function moveModdedFn(world, entity, goalX, goalY, goalZ)
+  local _, _, cols, len = world:move(entity, goalX, goalY, goalZ)
+  world.freeTable(cols)
+  return len
+end
+doTests('Modded', require 'bump-niji', moveModdedFn)

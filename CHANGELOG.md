@@ -1,39 +1,60 @@
-## bump.lua changelog
+bump-niji changelog
+===================
 
-## v3.1.7
+v1.0.0
+------
+
+* Added `world.freeCollisionTable()` to help with cleaning up garbage. bump-niji generates *NO* garbage if this is used.
+* `normal`, `move`, and `touch` are no longer sub-tables, and are instead plain attributes normalX, normalY, moveX, moveY, touchX, touchY.
+
+
+
+bump.lua changelog
+==================
+
+v3.1.7
+------
 
 * Fixes rare edge case which was triggered sometimes when two rects shared one corner and one of them moved (#33)
 
-## v3.1.6
+v3.1.6
+------
 
 * Fixes queryRect accepting rectangles with negative dimensions without raising an error
 
-## v3.1.5
+v3.1.5
+------
 
 * Fixed a typo inside the bounce code
 
-## v3.1.4
+v3.1.4
+------
 
-* bump.lua was declaring '_' as a global variable by mistake. Added automated tests to prevent other global vars in the future
+* bump.lua was declaring _ as a global variable by mistake. Added automated tests to prevent other global vars in the future
 
-## v3.1.3
+v3.1.3
+------
 
 * Fix floating-point issue when using coordinates like 100.1298374892437, by adding a 10^-10 delta margin in some operations
 * Add and remove less stuff when updating an item
 
-## v3.1.2
+v3.1.2
+------
 
 * Add world:getItems and world:countItems
 
-## v3.1.1
+v3.1.1
+------
 
 * Bugfix in rect_detectCollision where goalY was not correctly initialized
 
-## v3.1.0
+v3.1.0
+------
 
 * The `filter` parameter of `world:move`, `world:check` and `world:project` now has the signature `filter(item, other)` instead of `filter(other)`.
 
-## v3.0.0
+v3.0.0
+------
 
 * Renamed `world:move` to `world:update`
 * `world:move()` now implements a basic collision-resolution algorithm - no need for the user to do the "complex loops" he needed to use in 2.0.x
@@ -48,15 +69,15 @@
 * It is possible to add new response types to the world
 
 
-## v2.0.1
+v2.0.1
+------
 
 * Added `world:hasItem(item)`
 
-## v2.0.0
+v2.0.0
+------
 
 * Massive interface change:
   * moved the state to worlds
   * Only 1 element can be "moved" at the same time
   * Introduced the concept of "Collision methods"
-
-
