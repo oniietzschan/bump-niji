@@ -64,8 +64,6 @@ cols[i] = {
   --   * otherRect
 }
 ```
-  normal    = Vector({x=number,y=number}).
-  touch     = Vector({x=number,y=number}).
 
 ### Backwards-Compatible Changes
 
