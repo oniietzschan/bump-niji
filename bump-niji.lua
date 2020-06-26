@@ -36,10 +36,12 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------
 -- Table Pool
 ------------------------------------------
-local Pool = {
-  -- loaned = 0,
-}
+
+local freeTable, fetchTable
+-- local _loaned = 0
 do
+  local pool, len = {}, 0
+
   local ok, tabelClear = pcall(require, 'table.clear')
   if not ok then
     tabelClear = function (t)
@@ -49,26 +51,32 @@ do
     end
   end
 
-  local pool = {}
-  local len = 0
-
-  function Pool.fetch()
-    if len == 0 then
-      -- Pool.loaned = Pool.loaned + 1
-      Pool.free({})
-    end
-    local t = table.remove(pool, len)
-    len = len - 1
-    -- Pool.loaned = Pool.loaned + 1
-    return t
-  end
-
-  function Pool.free(t)
+  freeTable = function(t)
     tabelClear(t)
     len = len + 1
     pool[len] = t
-    -- Pool.loaned = Pool.loaned - 1
+    -- _loaned = _loaned - 1
   end
+
+  fetchTable = function()
+    if len == 0 then
+      -- _loaned = _loaned + 1
+      freeTable({})
+    end
+    local t = pool[len]
+    pool[len] = nil
+    len = len - 1
+    -- _loaned = _loaned + 1
+    return t
+  end
+end
+
+local function freeCollisions(t)
+  for i = #t, 1, -1 do
+    freeTable(t[i])
+    t[i] = nil
+  end
+  freeTable(t)
 end
 
 ------------------------------------------
@@ -231,7 +239,7 @@ local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
     tx, ty = x1 + dx * ti, y1 + dy * ti
   end
 
-  local col = Pool.fetch()
+  local col = fetchTable()
   col.overlaps = overlaps
   col.ti = ti
   col.distance = rect_getSquareDistance(x1,y1,w1,h1, x2,y2,w2,h2)
@@ -312,7 +320,7 @@ end
 ------------------------------------------
 
 local touch = function(_, col)
-  return col.touchX, col.touchY, Pool.fetch(), 0
+  return col.touchX, col.touchY, fetchTable(), 0
 end
 
 local cross = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
@@ -409,7 +417,7 @@ local function removeItemFromCell(self, item, cx, cy)
 end
 
 local function getDictItemsInCellRect(self, cl,ct,cw,ch)
-  local items_dict = Pool.fetch()
+  local items_dict = fetchTable()
 
   for cy=ct,ct+ch-1 do
     local row = self.rows[cy]
@@ -496,9 +504,9 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   goalY = goalY or y
   filter = filter or defaultFilter
 
-  local collisions, len = Pool.fetch(), 0
+  local collisions, len = fetchTable(), 0
 
-  local visited = Pool.fetch()
+  local visited = fetchTable()
   visited[item] = true
 
   -- This could probably be done with less cells using a polygon raster over the cells instead of a
@@ -532,8 +540,8 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
     end
   end
 
-  Pool.free(dictItemsInCellRect)
-  Pool.free(visited)
+  freeTable(dictItemsInCellRect)
+  freeTable(visited)
 
   table.sort(collisions, sortByTiAndDistance)
 
@@ -595,7 +603,7 @@ function World:queryRect(x,y,w,h, filter)
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
 
-  local items, len = Pool.fetch(), 0
+  local items, len = fetchTable(), 0
 
   local rect
   for item,_ in pairs(dictItemsInCellRect) do
@@ -608,7 +616,7 @@ function World:queryRect(x,y,w,h, filter)
     end
   end
 
-  Pool.free(dictItemsInCellRect)
+  freeTable(dictItemsInCellRect)
 
   return items, len
 end
@@ -617,7 +625,7 @@ function World:queryPoint(x,y, filter)
   local cx,cy = self:toCell(x,y)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cx,cy,1,1)
 
-  local items, len = Pool.fetch(), 0
+  local items, len = fetchTable(), 0
 
   local rect
   for item,_ in pairs(dictItemsInCellRect) do
@@ -630,14 +638,14 @@ function World:queryPoint(x,y, filter)
     end
   end
 
-  Pool.free(dictItemsInCellRect)
+  freeTable(dictItemsInCellRect)
 
   return items, len
 end
 
 function World:querySegment(x1, y1, x2, y2, filter)
   local itemInfo, len = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2, filter)
-  local items = Pool.fetch()
+  local items = fetchTable()
   for i=1, len do
     items[i] = itemInfo[i].item
   end
@@ -757,9 +765,9 @@ function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
 
   local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, filter)
 
-  local cols, len = Pool.fetch(), 0
+  local cols, len = fetchTable(), 0
 
-  local visited = Pool.fetch()
+  local visited = fetchTable()
   visited[item] = true
 
   while projected_len > 0 do
@@ -769,9 +777,9 @@ function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
 
     -- Clear projected_cols and all child tables, except index 1.
     for i = 2, projected_len do
-      Pool.free(projected_cols[i])
+      freeTable(projected_cols[i])
     end
-    Pool.free(projected_cols)
+    freeTable(projected_cols)
 
     visited[col.other] = true
 
@@ -786,30 +794,22 @@ function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
     )
   end
 
-  Pool.free(visited)
-  Pool.free(projected_cols)
+  freeTable(visited)
+  freeCollisions(projected_cols)
 
   return goalX, goalY, cols, len
 end
 
-function World.freeTable(cols)
-  for i = #cols, 1, -1 do
-    Pool.free(cols[i])
-    cols[i] = nil
-  end
-  Pool.free(cols)
-end
-
--- function World.debug()
---   print(Pool.loaned)
--- end
+World.freeTable = freeTable
+World.fetchTable = fetchTable
+World.freeCollisions = freeCollisions
 
 -- Public library functions
 
 local bump = {}
 
 bump.newWorld = function(cellSize)
-  cellSize = cellSize or 64
+  cellSize = cellSize or 1
   assertIsPositiveNumber(cellSize, 'cellSize')
   local world = setmetatable({
     cellSize       = cellSize,
@@ -843,5 +843,12 @@ bump.responses = {
   slide  = slide,
   bounce = bounce
 }
+
+bump.freeTable = freeTable
+bump.fetchTable = fetchTable
+bump.freeCollisions = freeCollisions
+-- bump.debug = function()
+--   print(_loaned)
+-- end
 
 return bump

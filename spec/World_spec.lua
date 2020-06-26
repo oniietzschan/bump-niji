@@ -4,7 +4,7 @@ describe('World', function()
   local world
 
   before_each(function()
-    world = bump.newWorld()
+    world = bump.newWorld(64)
   end)
 
   local collect = function(t, field_name)

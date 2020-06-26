@@ -1,4 +1,4 @@
-local bump = require 'bump-niji'
+local Bump = require 'bump-niji'
 
 local bumpDebug
 do
@@ -43,7 +43,7 @@ end
 
 
 -- World creation
-local world = bump.newWorld()
+local world = Bump.newWorld()
 
 local cols_len = 0 -- how many collisions are happening
 
@@ -114,7 +114,7 @@ function player:update(dt)
   for _, col in ipairs(cols) do
     consolePrint(("col.other = %s, col.type = %s, col.normal = %d,%d"):format(col.other, col.type, col.normalX, col.normalY))
   end
-  world.freeTable(cols)
+  Bump.freeCollisions(cols)
 end
 
 function player:draw()
@@ -142,10 +142,10 @@ end
 function love.load()
   world:add(player, player.x, player.y, player.w, player.h)
 
-  addBlock(32,       0,     800 - 32, 32)
+  addBlock(32,       0,        800 - 32, 32)
   addBlock(0,        600 - 32, 800 - 32, 32)
-  addBlock(0,        0,      32, 600 - 32)
-  addBlock(800 - 32, 32,      32, 600 - 32)
+  addBlock(0,        0,        32,       600 - 32)
+  addBlock(800 - 32, 32,       32,       600 - 32)
 
   for _ = 1, 30 do
     addBlock(

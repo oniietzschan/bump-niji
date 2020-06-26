@@ -1,6 +1,6 @@
-local bump            = require('bump-niji')
-local detect          = bump.rect.detectCollision
-local responses  = bump.responses
+local bump = require('bump-niji')
+local detect    = bump.rect.detectCollision
+local responses = bump.responses
 
 local world = bump.newWorld()
 

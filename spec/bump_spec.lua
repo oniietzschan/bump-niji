@@ -7,8 +7,8 @@ describe('bump', function()
       assert.truthy(bump.newWorld())
     end)
 
-    it('defaults the cellSize to 64', function()
-      assert.equal(bump.newWorld().cellSize, 64)
+    it('defaults the cellSize to 1', function()
+      assert.equal(bump.newWorld().cellSize, 1)
     end)
 
     it('can set the cellSize', function()

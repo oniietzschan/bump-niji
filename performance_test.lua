@@ -64,6 +64,7 @@ local function doTests(label, bump, moveFn)
   local totalGarbage = 0
   for _ = 1, TEST_COUNT do
     local world = bump.newWorld(1)
+    world.debug = bump.debug
     local garbage = doTest(world, moveFn)
     totalGarbage = totalGarbage + garbage
   end
@@ -79,7 +80,7 @@ doTests('Original', require 'bump-original', moveOriginalFn)
 
 local function moveModdedFn(world, entity, goalX, goalY, goalZ)
   local _, _, cols, len = world:move(entity, goalX, goalY, goalZ)
-  world.freeTable(cols)
+  world.freeCollisions(cols)
   return len
 end
 doTests('Modded', require 'bump-niji', moveModdedFn)

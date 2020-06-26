@@ -7,7 +7,7 @@ bump-niji
 
 bump-niji is a Lua collision-detection library for axis-aligned rectangles. It is an optimized version of [kikito's bump.lua library](https://github.com/kikito/bump.lua). Its main features are:
 
-* **Does not generate any garbage.** (provided that you clean up with `World.freeCollisionTable()`)
+* **Does not generate any garbage.** (provided that you clean up with `freeTable` and `freeCollisions`)
 * bump-niji only does axis-aligned bounding-box (AABB) collisions. If you need anything more complicated than that (circles, polygons, etc.) give [HardonCollider](https://github.com/vrld/HardonCollider) a look.
 * Handles tunnelling - all items are treated as "bullets". The fact that we only use AABBs allows doing this fast.
 * Strives to be fast while being economic in memory
@@ -17,27 +17,102 @@ bump-niji is a Lua collision-detection library for axis-aligned rectangles. It i
 
 The demos are LÖVE based, but this library can be used in any Lua-compatible environment.
 
-`bump` is ideal for:
+`bump-niji` is ideal for:
 
 * Tile-based games, and games where most entities can be represented as axis-aligned rectangles.
 * Games which require some physics, but not a full realistic simulation - like a platformer.
 * Examples of genres: top-down games (Zelda), Shoot-them-ups, fighting games (Street Fighter), platformers (Super Mario).
 
-`bump` is not a good match for:
+`bump-niji` is not a good match for:
 
 * Games that require polygons for the collision detection
 * Games that require highly realistic simulations of physics - things "stacking up", "rolling over slides", etc.
 * Games that require very fast objects colliding reallistically against each other (in bump, being _gameistic_, objects are moved and collided _one at a time_)
 * Simulations where the order in which the collisions are resolved isn't known.
 
-## Example
+
+
+Migration From bump.lua
+-----------------------
+
+### Backwards-Incompatible Changes
+
+The only backwards incompatible change in bump-niji is that the contents of the collision objects has been modified. The sub-tables `move`, `normal`, and `touch` have been flatted into plain attributes, and `itemRect` and `otherRect` have been removed. It now looks like this:
+
+```lua
+cols[i] = {
+  -- UNCHANGED ATTRIBUTES
+  item  = the item being moved / checked
+  other = an item colliding with the item being moved
+  type  = the result of `filter(other)`. It's usually "touch", "cross", "slide" or "bounce"
+  overlaps = boolean. True if item "was overlapping" other when the collision started.
+              False if it didn't but "tunneled" through other
+  ti       = Number between 0 and 1. How far along the movement to the goal did the collision occur>
+  -- NEW ATTRIBUTES
+  distance = The distance traveled before this collision occurred [NEW!]
+  moveX   = number. The difference between the original X coordinate and the actual one.
+  moveY   = number.
+  normalX = number. The collision normal; usually one of -1, 0, or 1.
+  normalY = number.
+  touchX  = number. The coordinate where the items started touching each other.
+  touchY  = number.
+  -- REMOVED ATTRIBUTES
+  --   * moved
+  --   * normal
+  --   * touch
+  --   * itemRect
+  --   * otherRect
+}
+```
+  normal    = Vector({x=number,y=number}).
+  touch     = Vector({x=number,y=number}).
+
+### Backwards-Compatible Changes
+
+If you want to get the full benefit of bump-niji, then you should call its table-cleanup methods when you can:
+
+```lua
+local x, y, cols, len = world:move(entity, 32, 64)
+handleCollisions(cols)
+-- Now that you're done with cols...
+-- Kindly call `freeCollisions` to return it to bump-niji's internal table pool.
+world.freeCollisions(cols)
+```
+
+```lua
+-- "query" methods should be cleaned up with freeTable() instead.
+local items, len = world:queryRect(0, 0, 64, 64)
+handleItems(items)
+world.freeTable(items)
+
+local items, len = world:queryPoint(32, 96)
+handleItems(items)
+world.freeTable(items)
+
+local items, len = world:querySegment(16, 16, 80, 80)
+handleItems(items)
+world.freeTable(items)
+
+-- idk what's going on with querySegmentWithCoords at the moment *shrugging*
+```
+
+Technically this is all optional. Even if you don't call these methods, bump-niji still generates a lot less garbaged compared to the original bump.lua.
+
+Also:
+
+* `bump.newWorld()`'s default cell size is now `1` instead of `64`.
+
+
+
+Example
+-------
 
 ```lua
 
 local bump = require 'bump-niji'
 
 -- The grid cell size can be specified via the initialize method
--- By default, the cell size is 64
+-- By default, the cell size is 1
 local world = bump.newWorld(50)
 
 -- create two rectangles
@@ -68,29 +143,18 @@ for i=1,len do -- If more than one simultaneous collision, they are sorted out b
 end
 
 -- [NEW] Optional, but you should clean up in order to eliminate garbage generation.
-world.freeCollisionTable(cols)
+world.freeCollisions(cols)
 
 -- remove A and B from the world
 world:remove(A)
 world:remove(B)
 ```
 
-## Demos
+## Demo
 
-There is a demo showing movement, collision detection and basic slide-based resolution in this branch:
-
-http://github.com/kikito/bump.lua/tree/simpledemo
+There is a demo showing movement, collision detection, and basic slide-based resolution. You will need to run `main.lua` in [LÖVE](http://love2d.org) in order to try it.
 
 ![simpledemo](https://kikito.github.io/bump.lua/img/bump-simpledemo.gif)
-
-There's a more complex demo showing more advanced movement mechanics (i.e. acceleration, bouncing) in this other
-repo:
-
-http://github.com/kikito/bump.lua/tree/demo
-
-![demo](https://kikito.github.io/bump.lua/img/bump-demo.gif)
-
-You will need [LÖVE](http://love2d.org) in order to try any of them.
 
 ## Basic API - Adding, removing and moving items
 
@@ -112,7 +176,7 @@ local world = bump.newWorld(cellSize)
 
 The first thing to do with bump is creating a world. That is done with `bump.newWorld`.
 
-* `cellSize`. Is an optional number. It defaults to 64. It represents the size of the sides
+* `cellSize`. Is an optional number. It defaults to 1. It represents the size of the sides
   of the (squared) cells that will be used internally to provide the data. In tile based games, it's usually a multiple of
   the tile side size. So in a game where tiles are 32x32, `cellSize` will be 32, 64 or 128. In more sparse games, it can be
   higher.
