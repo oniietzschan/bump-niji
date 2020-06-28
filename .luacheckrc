@@ -3,11 +3,11 @@ allow_defined = false -- Do NOT allow implicitly defined globals.
 allow_defined_top = false -- Do NOT allow implicitly defined globals.
 
 files = {
+  ['bump-niji.lua'] = {
+    std = 'luajit',
+  },
   ['main.lua'] = {
     std = 'luajit+love',
-  },
-  ['bump-3dpd.lua'] = {
-    std = 'luajit',
   },
   ['spec/*'] = {
     std = 'luajit+busted',

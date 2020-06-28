@@ -94,7 +94,7 @@ world.freeTable(items)
 -- idk what's going on with querySegmentWithCoords at the moment *shrugging*
 ```
 
-Technically this is all optional. Even if you don't call these methods, bump-niji still generates a lot less garbaged compared to the original bump.lua.
+Technically this is all optional. Even if you don't call these methods, bump-niji still generates a lot less garbage compared to the original bump.lua.
 
 Also:
 

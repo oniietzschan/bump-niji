@@ -42,9 +42,10 @@ local freeTable, fetchTable
 do
   local pool, len = {}, 0
 
-  local ok, tabelClear = pcall(require, 'table.clear')
+  -- Future proof for when Mike Pall blesses us with LuaJIT 2.1.0
+  local ok, tableClear = pcall(require, 'table.clear')
   if not ok then
-    tabelClear = function (t)
+    tableClear = function (t)
       for k, _ in pairs(t) do
         t[k] = nil
       end
@@ -52,7 +53,7 @@ do
   end
 
   freeTable = function(t)
-    tabelClear(t)
+    tableClear(t)
     len = len + 1
     pool[len] = t
     -- _loaned = _loaned - 1
@@ -709,42 +710,42 @@ function World:update(item, x2,y2,w2,h2)
   w2,h2 = w2 or w1, h2 or h1
   assertIsRect(x2,y2,w2,h2)
 
-  if x1 ~= x2 or y1 ~= y2 or w1 ~= w2 or h1 ~= h2 then
+  if x1 == x2 and y1 == y2 and w1 == w2 and h1 == h2 then
+    return
+  end
 
-    local cellSize = self.cellSize
-    local cl1,ct1,cw1,ch1 = grid_toCellRect(cellSize, x1,y1,w1,h1)
-    local cl2,ct2,cw2,ch2 = grid_toCellRect(cellSize, x2,y2,w2,h2)
+  local cellSize = self.cellSize
+  local cl1,ct1,cw1,ch1 = grid_toCellRect(cellSize, x1,y1,w1,h1)
+  local cl2,ct2,cw2,ch2 = grid_toCellRect(cellSize, x2,y2,w2,h2)
 
-    if cl1 ~= cl2 or ct1 ~= ct2 or cw1 ~= cw2 or ch1 ~= ch2 then
+  if cl1 ~= cl2 or ct1 ~= ct2 or cw1 ~= cw2 or ch1 ~= ch2 then
 
-      local cr1, cb1 = cl1+cw1-1, ct1+ch1-1
-      local cr2, cb2 = cl2+cw2-1, ct2+ch2-1
-      local cyOut
+    local cr1, cb1 = cl1+cw1-1, ct1+ch1-1
+    local cr2, cb2 = cl2+cw2-1, ct2+ch2-1
+    local cyOut
 
-      for cy = ct1, cb1 do
-        cyOut = cy < ct2 or cy > cb2
-        for cx = cl1, cr1 do
-          if cyOut or cx < cl2 or cx > cr2 then
-            removeItemFromCell(self, item, cx, cy)
-          end
+    for cy = ct1, cb1 do
+      cyOut = cy < ct2 or cy > cb2
+      for cx = cl1, cr1 do
+        if cyOut or cx < cl2 or cx > cr2 then
+          removeItemFromCell(self, item, cx, cy)
         end
       end
-
-      for cy = ct2, cb2 do
-        cyOut = cy < ct1 or cy > cb1
-        for cx = cl2, cr2 do
-          if cyOut or cx < cl1 or cx > cr1 then
-            addItemToCell(self, item, cx, cy)
-          end
-        end
-      end
-
     end
 
-    local rect = self.rects[item]
-    rect.x, rect.y, rect.w, rect.h = x2,y2,w2,h2
+    for cy = ct2, cb2 do
+      cyOut = cy < ct1 or cy > cb1
+      for cx = cl2, cr2 do
+        if cyOut or cx < cl1 or cx > cr1 then
+          addItemToCell(self, item, cx, cy)
+        end
+      end
+    end
 
   end
+
+  local rect = self.rects[item]
+  rect.x, rect.y, rect.w, rect.h = x2,y2,w2,h2
 end
 
 function World:move(item, goalX, goalY, filter)
