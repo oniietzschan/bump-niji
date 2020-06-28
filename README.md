@@ -1,8 +1,8 @@
 bump-niji
 =========
 
-[![Build Status](https://travis-ci.org/oniietzschan/bump-niji.svg?branch=master)](https://travis-ci.org/oniietzschan/bump-niji)
-[![Coverage Status](https://codecov.io/gh/oniietzschan/bump-niji/branch/master/graph/badge.svg)](https://codecov.io/gh/oniietzschan/bump-niji)
+[![Build Status](https://travis-ci.org/oniietzschan/bump-niji.svg?branch=gosyujin-sama)](https://travis-ci.org/oniietzschan/bump-niji)
+[![Coverage Status](https://codecov.io/gh/oniietzschan/bump-niji/branch/gosyujin-sama/graph/badge.svg)](https://codecov.io/gh/oniietzschan/bump-niji)
 ![Lua Versions](https://img.shields.io/badge/Lua-JIT%2C%205.1%2C%205.2%2C%205.3-blue.svg)
 
 bump-niji is a Lua collision-detection library for axis-aligned rectangles. It is an optimized version of [kikito's bump.lua library](https://github.com/kikito/bump.lua). Its main features are:
