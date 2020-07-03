@@ -465,7 +465,7 @@ end
 
 local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   local cells, len = getCellsTouchedBySegment(self, x1,y1,x2,y2)
-  local cell, rect, l,t,w,h, ti1,ti2, tii0,tii1
+  local cell, rect, x,y,w,h, ti1,ti2, tii0,tii1
   local visited, itemInfo, itemInfoLen = fetchTable(), fetchTable(), 0
 
   for i = 1, len do
