@@ -42,7 +42,7 @@ local freeTable, fetchTable
 do
   local pool, len = {}, 0
 
-  -- Future proof for when Mike Pall blesses us with LuaJIT 2.1.0
+  -- Future-proof for when Mike Pall blesses us with LuaJIT 2.1.0!
   local ok, tableClear = pcall(require, 'table.clear')
   if not ok then
     tableClear = function (t)
@@ -466,28 +466,38 @@ end
 local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   local cells, len = getCellsTouchedBySegment(self, x1,y1,x2,y2)
   local cell, rect, l,t,w,h, ti1,ti2, tii0,tii1
-  local visited, itemInfo, itemInfoLen = {},{},0
-  for i=1,len do
-    cell = cells[i]
-    for item in pairs(cell.items) do
-      if not visited[item] then
-        visited[item]  = true
-        if (not filter or filter(item)) then
-          rect           = self.rects[item]
-          l,t,w,h        = rect.x,rect.y,rect.w,rect.h
+  local visited, itemInfo, itemInfoLen = fetchTable(), fetchTable(), 0
 
-          ti1,ti2 = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
-          if ti1 and ((0 < ti1 and ti1 < 1) or (0 < ti2 and ti2 < 1)) then
-            -- the sorting is according to the t of an infinite line, not the segment
-            tii0,tii1    = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
-            itemInfoLen  = itemInfoLen + 1
-            itemInfo[itemInfoLen] = {item = item, ti1 = ti1, ti2 = ti2, weight = min(tii0,tii1)}
-          end
-        end
+  for i = 1, len do
+    cell = cells[i]
+    for item in pairs(cell.items) do repeat
+      if visited[item] then
+        break -- continue
       end
-    end
+
+      visited[item] = true
+
+      if filter and not filter(item) then
+        break -- continue
+      end
+
+      rect = self.rects[item]
+      x, y, w, h = rect.x,rect.y,rect.w,rect.h
+
+      ti1,ti2 = rect_getSegmentIntersectionIndices(x,y,w,h, x1,y1, x2,y2, 0, 1)
+      if ti1 and ((0 < ti1 and ti1 < 1) or (0 < ti2 and ti2 < 1)) then
+        -- the sorting is according to the t of an infinite line, not the segment
+        tii0,tii1    = rect_getSegmentIntersectionIndices(x,y,w,h, x1,y1, x2,y2, -math.huge, math.huge)
+        itemInfoLen  = itemInfoLen + 1
+        itemInfo[itemInfoLen] = {item = item, ti1 = ti1, ti2 = ti2, weight = min(tii0,tii1)}
+      end
+    until true end
   end
+
+  freeTable(visited)
+
   table.sort(itemInfo, sortByWeight)
+
   return itemInfo, itemInfoLen
 end
 
@@ -520,26 +530,31 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
 
   local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
 
-  for other,_ in pairs(dictItemsInCellRect) do
-    if not visited[other] and (alreadyVisited == nil or not alreadyVisited[other]) then
-      visited[other] = true
-
-      local responseName = filter(item, other)
-      if responseName then
-        local ox,oy,ow,oh   = self:getRect(other)
-        local col           = rect_detectCollision(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
-
-        if col then
-          col.other    = other
-          col.item     = item
-          col.type     = responseName
-
-          len = len + 1
-          collisions[len] = col
-        end
-      end
+  for other,_ in pairs(dictItemsInCellRect) do repeat
+    if visited[other] or (alreadyVisited and alreadyVisited[other]) then
+      break -- continue
     end
-  end
+
+    visited[other] = true
+
+    local responseName = filter(item, other)
+    if not responseName then
+      break -- continue
+    end
+
+    local ox, oy, ow, oh = self:getRect(other)
+    local col = rect_detectCollision(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
+    if col == nil then
+      break -- continue
+    end
+
+    col.other    = other
+    col.item     = item
+    col.type     = responseName
+
+    len = len + 1
+    collisions[len] = col
+  until true end
 
   freeTable(dictItemsInCellRect)
   freeTable(visited)
