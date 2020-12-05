@@ -8,6 +8,7 @@ bump-niji
 bump-niji is a Lua collision-detection library for axis-aligned rectangles. It is an optimized version of [kikito's bump.lua library](https://github.com/kikito/bump.lua). Its main features are:
 
 * **Does not generate any garbage.** (provided that you clean up with `freeTable` and `freeCollisions`)
+* Even if you don't clean up with `freeTable` / `freeCollisions`, it still generates less garbage than bump.lua.
 * bump-niji only does axis-aligned bounding-box (AABB) collisions. If you need anything more complicated than that (circles, polygons, etc.) give [HardonCollider](https://github.com/vrld/HardonCollider) a look.
 * Handles tunnelling - all items are treated as "bullets". The fact that we only use AABBs allows doing this fast.
 * Strives to be fast while being economic in memory
